@@ -11,9 +11,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from var_scraper import BASE_URL, EXCEL_FILENAME                                # pylint: disable=wrong-import-position
 
 
-
-
-
 class KEGGScraper:
     """
     KEGGScraper class containing all necessary methods to perform molecular
@@ -60,9 +57,13 @@ class KEGGScraper:
         scraped, scrape the rest.
         """
         for index, row in self.keggs.iterrows():
-            if row['KEGG'] not in ['-', 'nan'] and row['formula'] is None:
+            if row['KEGG'] != '-' and not pd.isna(row['KEGG']) and row['formula'] is None:
                 # Get page with current KEGG
-                r = requests.get(BASE_URL.format(KEGG=row['KEGG']), verify=False)                   # pylint: disable=invalid-name
+                try:
+                    r = requests.get(BASE_URL.format(KEGG=row['KEGG']), verify=False)                   # pylint: disable=invalid-name
+                except Exception:
+                    print("SSLError, skipping.")
+                    continue
                 inner_dom = etree.HTML(r.text)                                                      # pylint: disable=c-extension-no-member
 
                 # Parse molecular formula
@@ -74,4 +75,4 @@ class KEGGScraper:
                     print(f"Did not find formula for '{row['KEGG']}' KEGG at URL: '{BASE_URL.format(KEGG=row['KEGG'])}'.")                  # pylint: disable=line-too-long
 
         # Write updated DataFrame to file
-        self.keggs.transpose().to_excel(EXCEL_FILENAME, index=False, na_rep='NaN')
+        self.keggs.transpose().to_excel(EXCEL_FILENAME, index=False, na_rep='')
